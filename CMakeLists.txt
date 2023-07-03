@@ -1,6 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-set(RAISIM_VERSION 1.1.0)
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+cmake_minimum_required(VERSION 3.11)
+set(RAISIM_VERSION 1.1.7)
 project(raisim VERSION ${RAISIM_VERSION} LANGUAGES CXX)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
@@ -30,16 +29,16 @@ elseif(APPLE)
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/raisim/${RAISIM_OS})
 elseif(WIN32)
     set(RAISIM_OS win32)
-    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/raisim/${RAISIM_OS}/mt_release)
-    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/raisim/${RAISIM_OS}/mt_debug)   
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/raisim/${RAISIM_OS})
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/thirdParty/Eigen3)
 endif()
 
 #==
 # Package installation
 #==
+set(RAISIM_BIN_DIR ${RAISIM_OS})
+
 if(WIN32)
-    set(RAISIM_BIN_DIR ${RAISIM_OS}/mt_release)
     install(
         DIRECTORY
         ${CMAKE_CURRENT_LIST_DIR}/raisim/${RAISIM_BIN_DIR}/bin
@@ -47,20 +46,17 @@ if(WIN32)
         ${CMAKE_INSTALL_PREFIX}
     )
 else()
-    set(RAISIM_BIN_DIR ${RAISIM_OS})
+    install(
+        DIRECTORY
+        ${CMAKE_CURRENT_LIST_DIR}/raisim/${RAISIM_BIN_DIR}/lib
+        DESTINATION
+        ${CMAKE_INSTALL_PREFIX}
+    )
 endif()
-
 
 install(
         DIRECTORY
         ${CMAKE_CURRENT_LIST_DIR}/raisim/${RAISIM_BIN_DIR}/include
-        DESTINATION
-        ${CMAKE_INSTALL_PREFIX}
-)
-
-install(
-        DIRECTORY
-        "${CMAKE_CURRENT_LIST_DIR}/raisim/${RAISIM_BIN_DIR}/lib"
         DESTINATION
         ${CMAKE_INSTALL_PREFIX}
 )

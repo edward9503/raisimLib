@@ -20,6 +20,7 @@
 namespace raisim {
 
 class World;
+class RaisimServer;
 
 namespace contact {
 class BisectionContactSolver;
@@ -28,6 +29,7 @@ class Single3DContactProblem;
 
 class Object {
   friend class raisim::World;
+  friend class raisim::RaisimServer;
   friend class raisim::contact::BisectionContactSolver;
   friend class raisim::contact::Single3DContactProblem;
 
@@ -44,18 +46,18 @@ class Object {
    * get the world index. raisim::World::getObjects() returns a vector of object pointers.
    * This is method returns the index of this object in the vector.
    * @return the world index */
-  size_t getIndexInWorld() const;
+  [[nodiscard]] size_t getIndexInWorld() const;
 
   /**
    * get a vector of all contacts on the object.
    * @return contacts on the body */
-  const std::vector<Contact> &getContacts() const;
-  std::vector<Contact> &getContacts();
+  [[nodiscard]] const std::vector<Contact> &getContacts() const;
+  [[nodiscard]] std::vector<Contact> &getContacts();
 
   virtual void updateCollision() = 0;
   virtual void preContactSolverUpdate1(const Vec<3> &gravity, double dt) = 0;
   virtual void preContactSolverUpdate2(const Vec<3> &gravity, double dt, contact::ContactProblems& problems) = 0;
-  virtual void integrate(double dt, const Vec<3>& gravity) = 0;
+  virtual void integrate(double dt, const World* gravity) = 0;
 
   /// apply forces at the Center of Mass
   virtual void setExternalForce(size_t localIdx, const Vec<3>& force) = 0;
@@ -67,29 +69,30 @@ class Object {
   // spring force is not visualized
   virtual void setConstraintForce(size_t localIdx, const Vec<3>& pos, const Vec<3>& force) = 0;
 
-  virtual double getMass(size_t localIdx) const = 0;
+  [[nodiscard]] virtual double getMass(size_t localIdx) const = 0;
 
   /**
    * get the object type.
    * Possible types are SPHERE, BOX, CYLINDER, CONE, CAPSULE, MESH, HALFSPACE, COMPOUND, HEIGHTMAP, ARTICULATED_SYSTEM
    * @return the object type */
-  virtual ObjectType getObjectType() const = 0;
+  [[nodiscard]] virtual ObjectType getObjectType() const = 0;
   virtual void getPosition(size_t localIdx, Vec<3>& pos_w) const = 0;
   virtual void getVelocity(size_t localIdx, Vec<3>& vel_w) const = 0;
   virtual void getOrientation(size_t localIdx, Mat<3,3>& rot) const = 0;
   virtual void getPosition(size_t localIdx, const Vec<3>& pos_b, Vec<3>& pos_w) const = 0;
+  virtual void getVelocity(size_t localIdx, const Vec<3>& pos_b, Vec<3>& vel_w) const = 0;
 
   /**
    * get the object body type.
    * Available types are: DYNAMIC (movable and finite mass), STATIC (not movable and infinite mass), KINETIC (movable and infinite mass)
    * @return the body type */
-  virtual BodyType getBodyType(size_t localIdx) const { return bodyType_; };
+  [[nodiscard]] virtual BodyType getBodyType(size_t localIdx) const { return bodyType_; };
 
   /**
    * get the object body type.
    * Available types are: DYNAMIC (movable and finite mass), STATIC (not movable and infinite mass), KINETIC (movable and infinite mass).
    * @return the body type */
-  virtual BodyType getBodyType() const { return bodyType_; };
+  [[nodiscard]] virtual BodyType getBodyType() const { return bodyType_; };
 
   /**
    * get the contact point velocity in the world frame.
@@ -105,13 +108,13 @@ class Object {
   /**
    * get the name of the object
    * @return name of the object */
-  const std::string& getName() const { return name_; }
+  [[nodiscard]] const std::string& getName() const { return name_; }
 
   // external force visualization
-  const std::vector<Vec<3>>& getExternalForce() const { return externalForceViz_; }
-  const std::vector<Vec<3>>& getExternalForcePosition() const { return externalForceVizPos_; }
-  const std::vector<Vec<3>>& getExternalTorque() const { return externalTorqueViz_; }
-  const std::vector<Vec<3>>& getExternalTorquePosition() const { return externalTorqueVizPos_; }
+  [[nodiscard]] const std::vector<Vec<3>>& getExternalForce() const { return externalForceViz_; }
+  [[nodiscard]] const std::vector<Vec<3>>& getExternalForcePosition() const { return externalForceVizPos_; }
+  [[nodiscard]] const std::vector<Vec<3>>& getExternalTorque() const { return externalTorqueViz_; }
+  [[nodiscard]] const std::vector<Vec<3>>& getExternalTorquePosition() const { return externalTorqueVizPos_; }
   virtual void clearExternalForcesAndTorques() = 0;
 
  protected:
@@ -119,8 +122,13 @@ class Object {
   virtual void destroyCollisionBodies(dSpaceID id) = 0;
   virtual void addContactPointVel(size_t pointId, Vec<3>& vel) = 0;
   virtual void subContactPointVel(size_t pointId, Vec<3>& vel) = 0;
+
+  virtual void addContactPointVel2(size_t pointId, Vec<3>& vel) = 0;
+  virtual void subContactPointVel2(size_t pointId, Vec<3>& vel) = 0;
+
   virtual void updateTimeStep(double dt) = 0;
   virtual void updateTimeStepIfNecessary(double dt) = 0;
+  virtual void updateSensorsIfNecessary(const raisim::World* world) { };
   virtual void updateGenVelWithImpulse(size_t pointId, const Vec<3>& imp) = 0;
   virtual void appendJointLimits(std::vector<contact::Single3DContactProblem, AlignedAllocator<contact::Single3DContactProblem, 32>>& problem) {};
   virtual double enforceJointLimits(contact::Single3DContactProblem& problem) { return 0; };
@@ -136,12 +144,18 @@ class Object {
   std::vector<bool> isExternalForces_;
   std::vector<Vec<3>> externalForceAndTorque_;
   std::vector<Vec<3>> externalForceAndTorquePos_;
+  std::vector<size_t> externalForceAndTorqueBodyIndex_;
   std::vector<Vec<3>> externalForceViz_;
   std::vector<Vec<3>> externalForceVizPos_;
   std::vector<Vec<3>> externalTorqueViz_;
   std::vector<Vec<3>> externalTorqueVizPos_;
   std::vector<SparseJacobian> constraintJaco_;
+  std::vector<Vec<3>> constraintPos_;
   std::vector<Vec<3>> constraintForce_;
+  std::vector<size_t> constraintIdx_;
+
+ protected:
+  uint32_t visualTag = 0;
 };
 
 } // raisim

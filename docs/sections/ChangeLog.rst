@@ -4,6 +4,28 @@ Change Log
 Here we only describe the changes to the RaiSim library.
 Other peripheral codes are not tracked here.
 
+**v1.1.7**
+========================================
+Inverse dynamics pipeline using the recursive newton euler algorithm added.
+This allows users to compute the constrained forces and torques at the joints.
+IMU implementation added (check ``sensors`` example).
+Raisim is compiled with clang15
+
+**v1.1.6**
+========================================
+The contact solver has been improved.
+Both the accuracy and speed has been improved.
+New macro ``RS_TIMED_LOOP(us)`` hass been added.
+Please check the examples.
+
+**v1.1.4**
+=========================================
+This version contains significant improvements on the visualizers: RaisimUnity and RaisimUnreal.
+
+* The new server does not reinitialize when a new object is added (try ``examples/src/server/balls` example to see the difference).
+* New ``Map`` feature on `RaisimUnreal <https://raisim.com/sections/RaisimUnreal.html>`_.
+
+
 **v1.1**
 ========================================
 There have been huge changes in this version.
